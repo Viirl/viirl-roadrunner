@@ -38,6 +38,9 @@ add_action( 'init', function () {
     $viirl_rr_update_checker->setAuthentication(
         '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'
     );
+    
+    // Disable silent auto updates
+    $viirl_rr_update_checker->setAutomaticUpdates(false);
 
     // BETTER VERSION (optional): use a constant from wp-config.php instead
     // if ( defined( 'VIIRL_RR_GITHUB_TOKEN' ) && VIIRL_RR_GITHUB_TOKEN ) {
