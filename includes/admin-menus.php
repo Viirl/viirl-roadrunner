@@ -13,12 +13,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 function viirl_roadrunner_register_menus() {
     // Top-level (overview)
     add_menu_page(
-        'VIIRL Roadrunner',
-        'VIIRL Roadrunner',
+        'VIIRL Roadrunner',                  // Page title
+        'VIIRL Roadrunner',                  // Top-level menu label
         'manage_options',
         'viirl-roadrunner',
         'viirl_roadrunner_overview_page',
         VIIRL_RR_URL . 'assets/VIIRL-icon.svg'
+    );
+
+    // Submenu: Dashboard (points to the same overview page)
+    add_submenu_page(
+        'viirl-roadrunner',                  // Parent slug
+        'Dashboard',                         // Page title
+        'Dashboard',                         // Submenu label
+        'manage_options',
+        'viirl-roadrunner',                  // Same slug as parent
+        'viirl_roadrunner_overview_page'
     );
 
     // Submenu: Global Phone Number
@@ -78,7 +88,7 @@ function viirl_roadrunner_overview_page() {
     ?>
     <div class="wrap">
         <h1>VIIRL Roadrunner</h1>
-        <p>Roadrunner bundles a few handy tools you can use across Viirl sites.</p>
+        <p>Roadrunner bundles a few handy tools for the VIIRL dev team.</p>
 
         <h2>Shortcodes</h2>
         <ul style="list-style:disc;padding-left:20px;">
