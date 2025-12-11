@@ -6,6 +6,8 @@
  * Author: Shelby Gonzales
  */
 
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -30,8 +32,6 @@ add_filter( 'auto_update_plugin', function ( $update, $item ) {
 // ---------------------------------------------------------
 require_once VIIRL_RR_PATH . 'includes/vendor/plugin-update-checker/plugin-update-checker.php';
 
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
 add_action( 'init', function () {
     // If the library didn't load for some reason, don't fatal.
     if ( ! class_exists( PucFactory::class ) ) {
@@ -45,19 +45,19 @@ add_action( 'init', function () {
     );
 
     // If your default branch is "main", set it explicitly:
-    $viirl_rr_update_checker->setBranch( 'main' );
+    $updateChecker->setBranch( 'main' );
 
-    // SIMPLE VERSION
-    $viirl_rr_update_checker->setAuthentication(
+    // Private repo authentication.
+    $updateChecker->setAuthentication(
         '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'
     );
-    
-    // Disable silent auto updates
-    $viirl_rr_update_checker->setAutomaticUpdates(false);
+
+    // Disable silent auto updates via PUC.
+    $updateChecker->setAutomaticUpdates( false );
 
     // BETTER VERSION (optional): use a constant from wp-config.php instead
     // if ( defined( 'VIIRL_RR_GITHUB_TOKEN' ) && VIIRL_RR_GITHUB_TOKEN ) {
-    //     $viirl_rr_update_checker->setAuthentication( VIIRL_RR_GITHUB_TOKEN );
+    //     $updateChecker->setAuthentication( VIIRL_RR_GITHUB_TOKEN );
     // }
 } );
 
@@ -70,4 +70,3 @@ require_once VIIRL_RR_PATH . 'includes/footer.php';
 
 // Optional central bootstrap (can stay empty for now).
 add_action( 'plugins_loaded', [ 'VR_Core', 'init' ] );
-
