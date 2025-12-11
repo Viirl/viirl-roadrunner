@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VIIRL Roadrunner
  * Description: VIIRL utilities: Global Phone Number + Google Ratings Badge + Footer Copyright.
- * Version: 2.1.4
+ * Version: 2.1.6
  * Author: Shelby Gonzales
  */
 
