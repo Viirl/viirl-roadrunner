@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VIIRL Roadrunner
  * Description: VIIRL utilities: Global Phone Number + Google Ratings Badge + Footer Copyright.
- * Version: 2.1.3
+ * Version: 2.1.4
  * Author: Shelby Gonzales
  */
 
@@ -13,6 +13,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Plugin path/url helpers.
 define( 'VIIRL_RR_PATH', plugin_dir_path( __FILE__ ) );
 define( 'VIIRL_RR_URL',  plugin_dir_url( __FILE__ ) );
+
+// Force Roadrunner to use manual updates only.
+add_filter( 'auto_update_plugin', function ( $update, $item ) {
+    if ( empty( $item->plugin ) ) {
+        return $update;
+    }
+    if ( $item->plugin === plugin_basename( __FILE__ ) ) {
+        return false;
+    }
+    return $update;
+}, 999, 2 );
 
 // ---------------------------------------------------------
 // GitHub auto-updates (using plugin-update-checker).
