@@ -26,20 +26,22 @@ add_filter( 'auto_update_plugin', function ( $update, $item ) {
 }, 999, 2 );
 
 // ---------------------------------------------------------
-// GitHub auto-updates (using plugin-update-checker).
+// GitHub auto-updates (using plugin-update-checker v5).
 // ---------------------------------------------------------
 require_once VIIRL_RR_PATH . 'includes/vendor/plugin-update-checker/plugin-update-checker.php';
 
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
 add_action( 'init', function () {
     // If the library didn't load for some reason, don't fatal.
-    if ( ! class_exists( 'Puc_v4_Factory' ) ) {
+    if ( ! class_exists( PucFactory::class ) ) {
         return;
     }
 
-    $viirl_rr_update_checker = Puc_v4_Factory::buildUpdateChecker(
-        'https://github.com/Viirl/viirl-roadrunner', // GitHub repo URL (no .git)
-        __FILE__,                                    // Full path to main plugin file
-        'viirl-roadrunner'                           // Plugin slug
+    $updateChecker = PucFactory::buildUpdateChecker(
+        'https://github.com/Viirl/viirl-roadrunner/', // GitHub repo URL (no .git)
+        __FILE__,                                     // Full path to main plugin file
+        'viirl-roadrunner'                            // Plugin slug
     );
 
     // If your default branch is "main", set it explicitly:
