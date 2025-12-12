@@ -64,6 +64,7 @@ require_once VIIRL_RR_PATH . 'includes/admin-menus.php';
 require_once VIIRL_RR_PATH . 'includes/phone.php';
 require_once VIIRL_RR_PATH . 'includes/google-ratings.php';
 require_once VIIRL_RR_PATH . 'includes/footer.php';
+require_once VIIRL_RR_PATH . 'includes/link-checker.php';
 
 // Optional central bootstrap (can stay empty for now).
 add_action( 'plugins_loaded', [ 'VR_Core', 'init' ] );
