@@ -19,6 +19,67 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Per-user setting: suppress intentional "/" home links when text is Home/Back to home.
+ * Default: enabled.
+ */
+define( 'VIIRL_RR_LC_USERMETA_SUPPRESS_HOME', 'viirl_rr_lc_suppress_home_root' );
+
+function viirl_rr_lc_get_suppress_home_setting() : bool {
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return true;
+    }
+
+    $val = get_user_meta( $user_id, VIIRL_RR_LC_USERMETA_SUPPRESS_HOME, true );
+
+    // If never set, default ON.
+    if ( $val === '' ) {
+        return true;
+    }
+
+    return (bool) intval( $val );
+}
+
+function viirl_rr_lc_set_suppress_home_setting( bool $enabled ) : void {
+    $user_id = get_current_user_id();
+    if ( ! $user_id ) {
+        return;
+    }
+    update_user_meta( $user_id, VIIRL_RR_LC_USERMETA_SUPPRESS_HOME, $enabled ? 1 : 0 );
+}
+
+/**
+ * Suppress root/home links only when:
+ * - href is exactly "/"
+ * - link text is exactly "Home" or "Back to home" (case-insensitive)
+ * - NOT an image/logo link
+ */
+function viirl_rr_link_checker_should_suppress_root_link(
+    $href,
+    $link_text,
+    $raw_inner_html = '',
+    $enabled = true
+) : bool {
+    if ( ! $enabled ) {
+        return false;
+    }
+
+    $href = trim( (string) $href );
+    if ( $href !== '/' ) {
+        return false;
+    }
+
+    // If anchor contains an image, do NOT suppress (logo/image links)
+    if ( is_string( $raw_inner_html ) && stripos( $raw_inner_html, '<img' ) !== false ) {
+        return false;
+    }
+
+    // Suppress if link text contains "home" anywhere (case-insensitive)
+    $t = strtolower( (string) $link_text );
+    return strpos( $t, 'home' ) !== false;
+}
+
+/**
  * Admin page callback.
  * admin-menus.php submenu callback should point to: viirl_rr_link_checker_page
  */
@@ -27,10 +88,21 @@ function viirl_rr_link_checker_page() {
         return;
     }
 
-    $results = [];
+    $results       = [];
+    $suppress_home = viirl_rr_lc_get_suppress_home_setting();
+
     if ( isset( $_POST['viirl_rr_link_checker_scan'] ) ) {
         check_admin_referer( 'viirl_rr_link_checker_scan', 'viirl_rr_link_checker_nonce' );
-        $results = viirl_rr_link_checker_scan_site();
+
+        $suppress_home = ! empty( $_POST['viirl_rr_suppress_home_root'] ) && (int) $_POST['viirl_rr_suppress_home_root'] === 1;
+
+        viirl_rr_lc_set_suppress_home_setting( $suppress_home );
+
+        $results = viirl_rr_link_checker_scan_site(
+            [
+                'suppress_home_root' => $suppress_home,
+            ]
+        );
     }
 
     ?>
@@ -45,6 +117,22 @@ function viirl_rr_link_checker_page() {
 
         <form method="post" style="margin: 1em 0 2em;">
             <?php wp_nonce_field( 'viirl_rr_link_checker_scan', 'viirl_rr_link_checker_nonce' ); ?>
+
+            <p style="margin: 0 0 12px;">
+                <input type="hidden" name="viirl_rr_suppress_home_root" value="0">
+            
+                <label style="display:inline-flex;align-items:center;gap:8px;">
+                    <input
+                        type="checkbox"
+                        name="viirl_rr_suppress_home_root"
+                        value="1"
+                        <?php checked( $suppress_home, true ); ?>
+                    >
+                    Ignore <code>/</code> links where the text is exactly <strong>Home</strong> or <strong>Back to home</strong>
+                    (does not ignore image/logo links).
+                </label>
+            </p>
+
             <p>
                 <button type="submit" name="viirl_rr_link_checker_scan" class="button button-primary">
                     Scan Website
@@ -113,14 +201,19 @@ function viirl_rr_link_checker_page() {
 /**
  * Scan the whole site for link issues.
  *
+ * @param array $opts
  * @return array[] Normalized rows for UI.
  */
-function viirl_rr_link_checker_scan_site() {
-    $raw = [];
+function viirl_rr_link_checker_scan_site( array $opts = [] ) {
+    $defaults = [
+        'suppress_home_root' => true,
+    ];
+    $opts = array_merge( $defaults, $opts );
 
-    $raw = array_merge( $raw, viirl_rr_link_checker_scan_posts() );
-    $raw = array_merge( $raw, viirl_rr_link_checker_scan_menus() );
-    $raw = array_merge( $raw, viirl_rr_link_checker_scan_widgets() );
+    $raw = [];
+    $raw = array_merge( $raw, viirl_rr_link_checker_scan_posts( $opts ) );
+    $raw = array_merge( $raw, viirl_rr_link_checker_scan_menus( $opts ) );
+    $raw = array_merge( $raw, viirl_rr_link_checker_scan_widgets( $opts ) );
 
     // Normalize all rows for the UI.
     $normalized = [];
@@ -135,17 +228,13 @@ function viirl_rr_link_checker_scan_site() {
  * Normalize a raw result row into consistent UI keys.
  *
  * Raw rows may contain:
- * - path, location, title, title_url, link_text, link_type, raw, context_type, elementor_template
+ * - path, location, title, title_url, link_text, link_type, raw, ui_type, elementor_template_name
  *
  * Normalized UI keys:
  * - path, page_title, page_url, type_html, link_text, issue
- *
- * @param array $row
- * @return array
  */
 function viirl_rr_link_checker_normalize_row( array $row ) {
     $path      = $row['path'] ?? '/';
-    $location  = $row['location'] ?? '';
     $title     = $row['title'] ?? '';
     $title_url = $row['title_url'] ?? '';
     $link_text = $row['link_text'] ?? '';
@@ -153,7 +242,6 @@ function viirl_rr_link_checker_normalize_row( array $row ) {
     $raw_href  = $row['raw'] ?? '';
 
     // Roadrunner dashboard URL for quick reference.
-    // Adjust if your dashboard slug differs.
     $roadrunner_dashboard = admin_url( 'admin.php?page=viirl-roadrunner' );
 
     // Elementor templates dashboard.
@@ -162,32 +250,28 @@ function viirl_rr_link_checker_normalize_row( array $row ) {
     // Determine display title (Elementor vs regular pages).
     if ( ! empty( $row['elementor_template_name'] ) ) {
         $page_title = 'Elementor Template: ' . $row['elementor_template_name'];
-        // For templates, link the TITLE to the templates dashboard (not a front-end page).
         $page_url   = $elementor_templates_dashboard;
     } else {
         $page_title = $title;
-        // For regular pages, link to front-end.
         $page_url   = $title_url;
     }
 
     // Determine type label HTML.
-    // - placeholder issues: show Button/Text link/Menu/Widget where possible
-    // - phone shortcode issues: "Phone shortcode" (linked to Roadrunner dashboard)
     if ( $link_type === 'phone_shortcode' ) {
         $type_html = '<a href="' . esc_url( $roadrunner_dashboard ) . '">Phone shortcode</a>';
     } else {
-        // Button vs text link, etc.
-        $pretty = $link_type;
+        $pretty = '';
 
-        // If a context type was set, prefer that.
         if ( ! empty( $row['ui_type'] ) ) {
-            $pretty = $row['ui_type'];
+            $pretty = (string) $row['ui_type'];
         } elseif ( is_string( $link_type ) && $link_type !== '' ) {
-            // Standardize common values.
-            if ( strtolower( $link_type ) === 'placeholder' ) {
-                $pretty = 'Text link';
-            }
+            $pretty = $link_type;
         } else {
+            $pretty = 'Text link';
+        }
+
+        // Clean up placeholders into readable types.
+        if ( strtolower( $pretty ) === 'placeholder' ) {
             $pretty = 'Text link';
         }
 
@@ -195,31 +279,29 @@ function viirl_rr_link_checker_normalize_row( array $row ) {
     }
 
     // Determine issue string.
-    // If it’s a phone shortcode in the URL field, show that specifically.
     if ( $link_type === 'phone_shortcode' ) {
-        $issue = 'Phone shortcode in URL field';
+        $issue = 'Phone shortcode misconfigured';
     } else {
         $issue = $raw_href ?: 'placeholder';
     }
 
-    // If location is useful, you can append to title or issue later; keeping UI clean for now.
-
     return [
-        'path'      => $path,
-        'page_title'=> $page_title,
-        'page_url'  => $page_url,
-        'type_html' => $type_html,
-        'link_text' => $link_text,
-        'issue'     => $issue,
+        'path'       => $path,
+        'page_title' => $page_title,
+        'page_url'   => $page_url,
+        'type_html'  => $type_html,
+        'link_text'  => $link_text,
+        'issue'      => $issue,
     ];
 }
 
 /**
  * Scan posts, pages, public CPTs and Elementor templates.
  *
+ * @param array $opts
  * @return array[] Raw rows.
  */
-function viirl_rr_link_checker_scan_posts() {
+function viirl_rr_link_checker_scan_posts( array $opts = [] ) {
     $results = [];
 
     $post_types = get_post_types( [ 'public' => true ], 'names' );
@@ -254,21 +336,17 @@ function viirl_rr_link_checker_scan_posts() {
 
         $is_elementor_template = ( 'elementor_library' === $post->post_type );
         $permalink             = get_permalink( $post_id );
-
-        // Elementor templates often don’t have a meaningful front-end URL; still extract if present.
-        $path = viirl_rr_link_checker_extract_path_from_url( $permalink );
+        $path                  = viirl_rr_link_checker_extract_path_from_url( $permalink );
 
         $context = [
-            'path'     => $path ?: '/',
-            'location' => $is_elementor_template ? 'Elementor Template' : ucfirst( $post->post_type ),
-            'title'    => $post->post_title,
-            'title_url'=> $permalink, // For pages, we want front-end links.
+            'path'      => $path ?: '/',
+            'location'  => $is_elementor_template ? 'Elementor Template' : ucfirst( $post->post_type ),
+            'title'     => $post->post_title,
+            'title_url' => $permalink, // For pages, link to front-end.
         ];
 
         if ( $is_elementor_template ) {
             $context['elementor_template_name'] = $post->post_title;
-            // For templates, path is usually not meaningful; keep it but it may show "/?elementor_library=..."
-            // If you want to suppress it, set to "/".
             if ( empty( $context['path'] ) ) {
                 $context['path'] = '/';
             }
@@ -277,7 +355,7 @@ function viirl_rr_link_checker_scan_posts() {
         // Scan standard post content for <a href="..."> occurrences.
         $results = array_merge(
             $results,
-            viirl_rr_link_checker_scan_html_for_links( $post->post_content, $context )
+            viirl_rr_link_checker_scan_html_for_links( $post->post_content, $context, $opts )
         );
 
         // Scan Elementor JSON for widget link fields.
@@ -287,7 +365,7 @@ function viirl_rr_link_checker_scan_posts() {
             if ( is_array( $decoded ) ) {
                 $results = array_merge(
                     $results,
-                    viirl_rr_link_checker_scan_elementor_tree( $decoded, $context )
+                    viirl_rr_link_checker_scan_elementor_tree( $decoded, $context, $opts )
                 );
             }
         }
@@ -310,9 +388,10 @@ function viirl_rr_link_checker_extract_path_from_url( $url ) {
  *
  * @param string $html
  * @param array  $context
+ * @param array  $opts
  * @return array[] Raw rows.
  */
-function viirl_rr_link_checker_scan_html_for_links( $html, $context ) {
+function viirl_rr_link_checker_scan_html_for_links( $html, $context, array $opts = [] ) {
     $results = [];
 
     if ( empty( $html ) || ! is_string( $html ) ) {
@@ -324,12 +403,21 @@ function viirl_rr_link_checker_scan_html_for_links( $html, $context ) {
     }
 
     foreach ( $matches as $m ) {
-        $href      = trim( html_entity_decode( $m[1] ) );
-        $link_text = wp_strip_all_tags( $m[2] );
+        $href       = trim( html_entity_decode( $m[1] ) );
+        $inner_html = (string) $m[2];
+        $link_text  = wp_strip_all_tags( $inner_html );
 
         $classification = viirl_rr_link_checker_classify_href( $href );
         if ( ! $classification['is_issue'] ) {
             continue;
+        }
+
+        // Suppress only the intentional "/" Home/Back to home links (not images).
+        if ( $classification['link_type'] === 'placeholder' ) {
+            $enabled = ! empty( $opts['suppress_home_root'] );
+            if ( viirl_rr_link_checker_should_suppress_root_link( $href, $link_text, $inner_html, $enabled ) ) {
+                continue;
+            }
         }
 
         $results[] = [
@@ -340,9 +428,7 @@ function viirl_rr_link_checker_scan_html_for_links( $html, $context ) {
             'link_text' => $link_text,
             'link_type' => $classification['link_type'],
             'raw'       => $href,
-            // UI hint:
             'ui_type'   => 'Text link',
-            // Elementor template label handling:
             'elementor_template_name' => $context['elementor_template_name'] ?? '',
         ];
     }
@@ -355,9 +441,10 @@ function viirl_rr_link_checker_scan_html_for_links( $html, $context ) {
  *
  * @param array $elements
  * @param array $context
+ * @param array $opts
  * @return array[] Raw rows.
  */
-function viirl_rr_link_checker_scan_elementor_tree( array $elements, array $context ) {
+function viirl_rr_link_checker_scan_elementor_tree( array $elements, array $context, array $opts = [] ) {
     $results = [];
 
     foreach ( $elements as $element ) {
@@ -393,6 +480,24 @@ function viirl_rr_link_checker_scan_elementor_tree( array $elements, array $cont
                     $link_text = wp_strip_all_tags( $settings['button_text'] );
                 }
 
+                // Suppress only intentional "/" Home/Back to home (and never suppress image/logo widgets).
+                if ( $classification['link_type'] === 'placeholder' ) {
+                    $enabled = ! empty( $opts['suppress_home_root'] );
+
+                    $widget_lower = strtolower( (string) $widget );
+                    $looks_like_image_or_logo = (
+                        strpos( $widget_lower, 'image' ) !== false ||
+                        strpos( $widget_lower, 'logo' ) !== false ||
+                        strpos( $widget_lower, 'site-logo' ) !== false ||
+                        strpos( $widget_lower, 'icon' ) !== false
+                    );
+
+                    if ( ! $looks_like_image_or_logo && viirl_rr_link_checker_should_suppress_root_link( $href, $link_text, '', $enabled ) ) {
+                        // Only suppress if it's text Home/Back to home; never suppress image/logo widgets.
+                        continue;
+                    }
+                }
+
                 $results[] = [
                     'path'      => $context['path'] ?? '/',
                     'location'  => ( $context['location'] ?? '' ) . ' (Elementor)',
@@ -409,7 +514,7 @@ function viirl_rr_link_checker_scan_elementor_tree( array $elements, array $cont
 
         // Recurse.
         if ( ! empty( $child_elems ) ) {
-            $results = array_merge( $results, viirl_rr_link_checker_scan_elementor_tree( $child_elems, $context ) );
+            $results = array_merge( $results, viirl_rr_link_checker_scan_elementor_tree( $child_elems, $context, $opts ) );
         }
     }
 
@@ -462,9 +567,10 @@ function viirl_rr_link_checker_classify_href( $href ) {
 /**
  * Scan navigation menus.
  *
+ * @param array $opts
  * @return array[] Raw rows.
  */
-function viirl_rr_link_checker_scan_menus() {
+function viirl_rr_link_checker_scan_menus( array $opts = [] ) {
     $results = [];
 
     $menus = wp_get_nav_menus();
@@ -489,11 +595,21 @@ function viirl_rr_link_checker_scan_menus() {
                 continue;
             }
 
+            // Suppress only intentional "/" Home/Back to home menu items.
+            if ( $classification['link_type'] === 'placeholder' ) {
+                $enabled   = ! empty( $opts['suppress_home_root'] );
+                $link_text = (string) ( $item->title ?? '' );
+
+                if ( viirl_rr_link_checker_should_suppress_root_link( $href, $link_text, '', $enabled ) ) {
+                    continue;
+                }
+            }
+
             $results[] = [
                 'path'      => viirl_rr_link_checker_extract_path_from_url( $href ),
                 'location'  => 'Menu: ' . $menu->name,
                 'title'     => $item->title,
-                'title_url' => '', // No front-end "page" here in a reliable way.
+                'title_url' => '',
                 'link_text' => $item->title,
                 'link_type' => $classification['link_type'],
                 'raw'       => $href,
@@ -508,9 +624,10 @@ function viirl_rr_link_checker_scan_menus() {
 /**
  * Scan text widgets for <a> tags with placeholder links / phone shortcodes.
  *
+ * @param array $opts
  * @return array[] Raw rows.
  */
-function viirl_rr_link_checker_scan_widgets() {
+function viirl_rr_link_checker_scan_widgets( array $opts = [] ) {
     $results = [];
 
     $sidebars_widgets = get_option( 'sidebars_widgets' );
@@ -552,10 +669,10 @@ function viirl_rr_link_checker_scan_widgets() {
                 'path'      => '/',
                 'location'  => 'Widget: ' . $sidebar_id,
                 'title'     => ! empty( $widget['title'] ) ? $widget['title'] : 'Text widget',
-                'title_url' => '', // No front-end URL for widget itself.
+                'title_url' => '',
             ];
 
-            $results = array_merge( $results, viirl_rr_link_checker_scan_html_for_links( $text, $context ) );
+            $results = array_merge( $results, viirl_rr_link_checker_scan_html_for_links( $text, $context, $opts ) );
         }
     }
 
