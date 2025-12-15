@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VIIRL Roadrunner
  * Description: VIIRL utilities: Global Phone Number + Google Ratings Badge + Link Scanner + Footer Copyright.
- * Version: 2.1.8
+ * Version: 2.1.9
  * Author: Shelby Gonzales
  */
 
@@ -30,7 +30,19 @@ add_filter( 'auto_update_plugin', function ( $update, $item ) {
 // ---------------------------------------------------------
 // GitHub auto-updates (using plugin-update-checker v5).
 // ---------------------------------------------------------
-require_once VIIRL_RR_PATH . 'includes/vendor/plugin-update-checker/plugin-update-checker.php';
+$puchecker = VIIRL_RR_PATH . 'includes/vendor/plugin-update-checker/plugin-update-checker.php';
+
+if ( file_exists( $puchecker ) ) {
+    require_once $puchecker;
+} else {
+    // Don’t fatal the whole site if the vendor folder didn’t ship in the update.
+    add_action( 'admin_notices', function () use ( $puchecker ) {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+        echo '<div class="notice notice-error"><p><strong>VIIRL Roadrunner:</strong> Update checker library missing. Expected: <code>' .
+             esc_html( str_replace( ABSPATH, '/', $puchecker ) ) .
+             '</code>. Please reinstall the plugin or redeploy the release package.</p></div>';
+    } );
+}
 
 add_action( 'init', function () {
     // If the library didn't load for some reason, don't fatal.
