@@ -39,7 +39,7 @@ function viirl_roadrunner_phone_page() {
     ?>
     <div class="wrap">
         <h1>Global Phone Number</h1>
-        <p>Save a single phone number and reuse it everywhere via shortcodes.</p>
+        <p>Save a single phone number here and reuse it everywhere via shortcodes. Update the phone number here when it needs to be changed and it will update globally across the site.</p>
 
         <h3>Shortcodes</h3>
         <ul style="list-style:disc;padding-left:20px;">

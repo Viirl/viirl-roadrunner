@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: VIIRL Roadrunner
- * Description: VIIRL utilities: Global Phone Number + Google Ratings Badge + Link Scanner + Footer Copyright.
- * Version: 2.1.9
+ * Description: VIIRL Utilities: Global Phone Number + Global Content Variables (reusable site info shortcodes) + Google Ratings Badge + Link Scanner + Footer Copyright + Page/Post Duplicator.
+ * Version: 2.2
  * Author: Shelby Gonzales
  */
 
@@ -77,6 +77,8 @@ require_once VIIRL_RR_PATH . 'includes/phone.php';
 require_once VIIRL_RR_PATH . 'includes/google-ratings.php';
 require_once VIIRL_RR_PATH . 'includes/footer.php';
 require_once VIIRL_RR_PATH . 'includes/link-checker.php';
+require_once VIIRL_RR_PATH . 'includes/duplicate-page.php';
+require_once VIIRL_RR_PATH . 'includes/global-content-variables.php';
 
 // Optional central bootstrap (can stay empty for now).
 add_action( 'plugins_loaded', [ 'VR_Core', 'init' ] );
