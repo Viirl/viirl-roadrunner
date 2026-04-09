@@ -46,8 +46,8 @@ function viirl_roadrunner_global_content_variables_page() {
 
         <h3>Shortcodes</h3>
         <ul style="list-style:disc;padding-left:20px;">
-            <li><code>[viirl_site_name]</code> – Outputs the site name</li>
-            <li><code>[viirl_home_url]</code> – Outputs the website URL</li>
+            <li><code>[viirl_site_name]</code> – Outputs the site name as set in WordPress General settings.</li>
+            <li><code>[viirl_home_url]</code> – Outputs the website URL.</li>
         </ul>
 
         <h3>Current Values</h3>

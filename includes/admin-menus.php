@@ -40,6 +40,16 @@ function viirl_roadrunner_register_menus() {
         'viirl-roadrunner-phone',
         'viirl_roadrunner_phone_page'
     );
+    
+    // Submenu: Tel Link Cleaner
+    add_submenu_page(
+	'viirl-roadrunner',
+	'Tel Link Cleaner',
+	'Tel Link Cleaner',
+	'manage_options',
+	'viirl-rr-tel-link-cleaner',
+	'viirl_rr_render_tel_link_cleaner_page'
+    );
 
     // Submenu: Global Content Variables
     add_submenu_page(
@@ -121,28 +131,31 @@ function viirl_roadrunner_overview_page() {
         <p>Roadrunner bundles reusable tools and shortcodes for common VIIRL site tasks.</p>
 
         <h2>Features</h2>
-        <ol>
-            <li>
-                <strong>Global Phone Number</strong> – set the site’s phone number once, then use the shortcodes anywhere.
-            </li>
-            <li>
-                <strong>Global Content Variables</strong> – reuse WordPress site information like the site name and website URL across legal pages, templates, and other boilerplate content via shortcodes.
-            </li>
-            <li>
-                <strong>Google Ratings Badge</strong> – connect to the VIIRL proxy, set a Google Place ID, choose style/colors, then drop the shortcode where you want.
-            </li>
-            <li>
-                <strong>Footer Copyright</strong> – outputs a consistent footer line via shortcode (no extra settings required).
-            </li>
-            <li>
-                <strong>Button &amp; Link Checker</strong> – scans this site for placeholder buttons and links
-                (like <code>#</code>, <code>/</code>, or <code>javascript:void(0)</code>), malformed links that do not function, or all links that exist on the site. Scans pages, Elementor templates,
-                menus, and common widget areas with an option to export as a CSV. Does not scan for 404s.
-            </li>
-            <li>
-                <strong>Page &amp; Post Duplicator</strong> – adds a "VIIRL duplicate" option on pages and posts to duplicate an exact copy into a draft.
-            </li>
-        </ol>
+            <ol>
+                <li>
+                    <strong>Global Phone Number</strong> – set the site’s phone number once, then use the shortcodes anywhere.
+                </li>
+                <li>
+                    <strong>Tel Link Cleaner</strong> – scans saved site content for malformed <code>tel:</code> links, cleans them to a digits-only format, and shows a list of affected numbers and content after the scan runs.
+                </li>
+                <li>
+                    <strong>Global Content Variables</strong> – reuse WordPress site information like the site name and website URL across legal pages, templates, and other boilerplate content via shortcodes.
+                </li>
+                <li>
+                    <strong>Google Ratings Badge</strong> – connect to the VIIRL proxy, set a Google Place ID, choose style/colors, then drop the shortcode where you want.
+                </li>
+                <li>
+                    <strong>Footer Copyright</strong> – outputs a consistent footer line via shortcode (no extra settings required).
+                </li>
+                <li>
+                    <strong>Button &amp; Link Checker</strong> – scans this site for placeholder buttons and links
+                    (like <code>#</code>, <code>/</code>, or <code>javascript:void(0)</code>), malformed links that do not function, or all links that exist on the site. Scans pages, Elementor templates,
+                    menus, and common widget areas with an option to export as a CSV. Does not scan for 404s.
+                </li>
+                <li>
+                    <strong>Page &amp; Post Duplicator</strong> – adds a "VIIRL duplicate" option on pages and posts to duplicate an exact copy into a draft.
+                </li>
+            </ol>
 
         <p style="max-width: 720px; background: #fffbe5; border-left: 4px solid #dba617; padding: 12px 16px; margin-top: 24px;">
             <strong>Heads up:</strong> If the VIIRL Roadrunner plugin is deactivated or removed, any place that uses
@@ -159,10 +172,11 @@ function viirl_roadrunner_overview_page() {
             <li><code>[viirl_phone]</code> – Outputs the saved phone number as text.</li>
             <li><code>[viirl_phone link="true"]</code> – Outputs the number as a clickable <code>tel:</code> link.</li>
             <li><code>[viirl_phone_tel]</code> – Outputs only the <code>tel:XXXXXXXXXX</code> value (useful for Elementor Link fields).</li>
-            <li><code>[viirl_site_name]</code> – Outputs the WordPress site title.</li>
-            <li><code>[viirl_home_url]</code> – Outputs the website URL.</li>
             <li><code>[viirl_google_rating]</code> – Renders the Google Ratings Badge (configure Place ID &amp; Site Secret under Google Ratings Badge).</li>
             <li><code>[viirl_footer]</code> – Prints a simple footer: “Site © Year | Privacy | Terms and Conditions | Website by VIIRL”.</li>
+            <li><code>[viirl_site_name]</code> – Outputs the site name as set in WordPress General settings.</li>
+            <li><code>[viirl_home_url]</code> – Outputs the website URL.</li>
+
         </ul>
     </div>
     <?php
