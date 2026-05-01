@@ -30,7 +30,7 @@ add_action( 'admin_init', function () {
     $default_site_id = preg_replace( '~^https?://~i', '', site_url() );
 
     register_setting('viirl_rr_gr','viirl_rr_gr_place_id',   ['sanitize_callback'=>'sanitize_text_field','default'=>'']);
-    register_setting('viirl_rr_gr_site_id', 'viirl_rr_gr_site_id', [
+    register_setting('viirl_rr_gr','viirl_rr_gr_site_id', [
         'sanitize_callback' => 'viirl_rr_gr_sanitize_site_id',
         'default'           => $default_site_id,
     ]);
@@ -39,7 +39,7 @@ add_action( 'admin_init', function () {
     register_setting('viirl_rr_gr','viirl_rr_gr_bg_opacity', ['sanitize_callback'=>'viirl_rr_gr_sanitize_opacity','default'=>100]);
     register_setting('viirl_rr_gr','viirl_rr_gr_text',       ['sanitize_callback'=>'viirl_rr_gr_sanitize_color','default'=>'#2c3440']);
     register_setting('viirl_rr_gr','viirl_rr_gr_radius',     ['sanitize_callback'=>'viirl_rr_gr_sanitize_int','default'=>16]);
-    register_setting('viirl_rr_gr','viirl_rr_gr_style',      ['sanitize_callback'=>'viirl_rr_gr_sanitize_style','default'=>'left']);
+    register_setting('viirl_rr_gr','viirl_rr_gr_style',      ['sanitize_callback'=>'viirl_rr_gr_sanitize_style','default'=>'top']);
 });
 
 /** Clear cache when key inputs change */
@@ -65,12 +65,21 @@ function viirl_rr_gr_sanitize_color( $v ) {
     $v = trim( (string)$v );
     return preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $v) ? $v : '#ffffff';
 }
-function viirl_rr_gr_sanitize_int( $v ) { return max(0, intval($v)); }
-function viirl_rr_gr_sanitize_style( $v ) { return in_array($v, ['left','right'], true) ? $v : 'left'; }
+
+function viirl_rr_gr_sanitize_int( $v ) {
+    return max(0, intval($v));
+}
+
+function viirl_rr_gr_sanitize_style( $v ) {
+    if ( $v === 'right' ) return 'left';
+    return in_array($v, ['left','top'], true) ? $v : 'top';
+}
+
 function viirl_rr_gr_sanitize_opacity( $val ) {
     $n = is_numeric($val) ? (int)$val : 100;
     return max(0, min(100, $n));
 }
+
 /** Site ID stored as bare domain (no scheme / no trailing slash) */
 function viirl_rr_gr_sanitize_site_id( $value ) {
     $value = sanitize_text_field( $value );
@@ -78,6 +87,7 @@ function viirl_rr_gr_sanitize_site_id( $value ) {
     $value = rtrim($value, "/\\");
     return strtolower($value);
 }
+
 /** Hex -> RGB helper */
 function viirl_rr_gr_hex_to_rgb( $hex ) {
     $hex = ltrim(trim((string)$hex), '#');
@@ -88,6 +98,194 @@ function viirl_rr_gr_hex_to_rgb( $hex ) {
         return [hexdec(substr($hex,0,2)), hexdec(substr($hex,2,2)), hexdec(substr($hex,4,2))];
     }
     return [255,255,255];
+}
+
+/* ------------------------------------------------------------
+ * Compact badge styles
+ * ------------------------------------------------------------ */
+add_action( 'wp_head', 'viirl_rr_gr_widget_styles' );
+add_action( 'admin_head', 'viirl_rr_gr_widget_styles' );
+
+function viirl_rr_gr_widget_styles() {
+    ?>
+    <style>
+        .viirl-gr-wrap {
+            display: inline-block;
+            width: auto;
+            max-width: 100%;
+            min-width: 0;
+            vertical-align: top;
+        }
+
+        .viirl-gr-card {
+            display: inline-flex;
+            width: auto;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            text-decoration: none !important;
+            color: inherit;
+            vertical-align: top;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .viirl-gr-card,
+        .viirl-gr-card:hover,
+        .viirl-gr-card:focus,
+        .viirl-gr-card:active,
+        .viirl-gr-card:visited {
+            text-decoration: none !important;
+        }
+        
+        .viirl-gr-card * {
+            text-decoration: none !important;
+        }
+
+        .viirl-gr-card * {
+            box-sizing: border-box;
+        }
+
+        .viirl-gr-logo {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viirl-gr-logo img {
+            display: block;
+            width: 28px;
+            height: 28px;
+        }
+
+        .viirl-gr-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .viirl-gr-label {
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1.15;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .viirl-gr-rating {
+            font-weight: 800;
+            font-size: 21px;
+            line-height: 1;
+        }
+
+        .viirl-gr-count {
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.2;
+            word-break: break-word;
+            opacity: 0.9;
+        }
+
+        .viirl-gr-stars {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .viirl-gr-star {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 auto;
+        }
+
+        .viirl-gr-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        /* Top style: compact stacked badge */
+        .viirl-gr-card.viirl-gr-style-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        /* Left style: logo left, content stacked right */
+        .viirl-gr-card.viirl-gr-style-left {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .viirl-gr-card.viirl-gr-style-left .viirl-gr-stack {
+            align-items: flex-start;
+        }
+
+        @media (max-width: 767px) {
+            .viirl-gr-card {
+                gap: 8px;
+                padding: 12px !important;
+            }
+
+            .viirl-gr-logo img {
+                width: 24px;
+                height: 24px;
+            }
+
+            .viirl-gr-label {
+                font-size: 14px;
+            }
+
+            .viirl-gr-rating {
+                font-size: 19px;
+            }
+
+            .viirl-gr-count {
+                font-size: 12px;
+            }
+
+            .viirl-gr-star {
+                width: 15px;
+                height: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .viirl-gr-card {
+                gap: 7px;
+                padding: 10px 12px !important;
+            }
+
+            .viirl-gr-logo img {
+                width: 22px;
+                height: 22px;
+            }
+
+            .viirl-gr-label {
+                font-size: 13px;
+            }
+
+            .viirl-gr-rating {
+                font-size: 17px;
+            }
+
+            .viirl-gr-count {
+                font-size: 11px;
+            }
+
+            .viirl-gr-star {
+                width: 14px;
+                height: 14px;
+            }
+        }
+    </style>
+    <?php
 }
 
 /* ------------------------------------------------------------
@@ -139,7 +337,6 @@ function viirl_rr_gr_enroll_if_needed() {
     $secret = trim((string)get_option('viirl_rr_gr_site_secret',''));
     if ($secret !== '') return true;
 
-    // Proxy expects probe_url WITHOUT nonce param; it appends nonce itself.
     $probe_url = add_query_arg(['viirl_rr_probe'=>1], home_url('/'));
 
     $step1 = viirl_rr_gr_proxy_get([
@@ -270,26 +467,24 @@ add_action('admin_init', function(){
  * SVG helpers
  * ------------------------------------------------------------ */
 function viirl_rr_gr_google_g_svg() {
-  // Use Google's official "G" asset to avoid SVG path/color issues.
-  // (64dp PNG, downscaled via CSS/width/height)
-  $src = 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_64dp.png';
+    $src = 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_64dp.png';
 
-  return '<img
-    src="'.esc_url($src).'"
-    alt="Google"
-    width="28"
-    height="28"
-    style="display:block;width:28px;height:28px;"
-    loading="lazy"
-    decoding="async"
-  >';
+    return '<img
+        src="'.esc_url($src).'"
+        alt="Google"
+        width="28"
+        height="28"
+        loading="lazy"
+        decoding="async"
+    >';
 }
 
 function viirl_rr_gr_star_svg($fillPct){
     $fillPct = max(0, min(100, (int)$fillPct));
     $filledWidth = 24 * ($fillPct / 100.0);
     $filledWidth = max(0, min(24, $filledWidth));
-    return '<svg class="viirl-gr-star" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" role="img">
+
+    return '<svg class="viirl-gr-star" viewBox="0 0 24 24" aria-hidden="true" role="img">
       <defs>
         <linearGradient id="viirl-gr-gold" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#f9b400"/>
@@ -305,15 +500,15 @@ function viirl_rr_gr_star_svg($fillPct){
 }
 
 /* ------------------------------------------------------------
- * Frontend renderer + shortcode
+ * Render helpers
  * ------------------------------------------------------------ */
-function viirl_rr_gr_render() {
+function viirl_rr_gr_render_with_style( $style_override = null ) {
     $place_id = get_option('viirl_rr_gr_place_id', '');
     $bg       = get_option('viirl_rr_gr_bg', '#ffffff');
     $bg_op    = (int)get_option('viirl_rr_gr_bg_opacity', 100);
     $text     = get_option('viirl_rr_gr_text', '#2c3440');
     $radius   = (int)get_option('viirl_rr_gr_radius', 16);
-    $style    = get_option('viirl_rr_gr_style', 'left');
+    $style    = $style_override ? $style_override : get_option('viirl_rr_gr_style', 'top');
 
     if (!$place_id) {
         return current_user_can('manage_options')
@@ -335,7 +530,6 @@ function viirl_rr_gr_render() {
     $url    = $data['googleMapsUri'] ?? '#';
     $name   = $data['displayName'] ?? 'Google';
 
-    // Build stars 0-5 with partial fill
     $stars = '';
     for ($i = 1; $i <= 5; $i++) {
         $diff = $rating - ($i - 1);
@@ -343,50 +537,73 @@ function viirl_rr_gr_render() {
         $stars .= viirl_rr_gr_star_svg($fill);
     }
 
-    // RGBA background
     list($r,$g,$b) = viirl_rr_gr_hex_to_rgb($bg);
     $alpha = max(0, min(1, $bg_op / 100));
     $bg_css = sprintf('rgba(%d,%d,%d,%.3f)', $r, $g, $b, $alpha);
 
-    $wrapStyle = sprintf(
-        'background:%s;border-radius:%dpx;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:14px 16px;display:inline-flex;gap:12px;align-items:center;text-decoration:none;color:%s;',
+    $wrap_style = sprintf(
+        'background:%s;border-radius:%dpx;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:12px 14px;color:%s;',
         esc_attr($bg_css),
         $radius,
         esc_attr($text)
     );
 
-    $stack     = 'display:flex;flex-direction:column;gap:4px;';
-    $row       = 'display:flex;align-items:center;gap:8px;flex-wrap:nowrap;';
-    $label     = 'font-weight:700;font-size:16px;';
-    $numStyle  = 'font-weight:800;font-size:22px;line-height:1;';
-    $countStyle= 'font-weight:700;';
-
-    $logo = viirl_rr_gr_google_g_svg();
-
-    if ($style === 'right') {
-        $html  = '<a class="viirl-gr-card" href="'.esc_url($url).'" target="_blank" rel="noopener" style="'.$wrapStyle.'" aria-label="View '.esc_attr($name).' reviews on Google">';
-        $html .= $logo;
-        $html .= '<div style="'.$stack.'">';
-        $html .= '<div style="'.$label.'">Google rating</div>';
-        $html .= '<div style="'.$row.'"><span style="'.$numStyle.'">'.esc_html(number_format($rating,1)).'</span><div class="viirl-gr-stars" style="display:flex;gap:2px;">'.$stars.'</div></div>';
+    if ($style === 'left') {
+        $html  = '<div class="viirl-gr-wrap">';
+        $html .= '<a class="viirl-gr-card viirl-gr-style-left" href="'.esc_url($url).'" target="_blank" rel="noopener" style="'.$wrap_style.'" aria-label="View '.esc_attr($name).' reviews on Google">';
+        $html .= '<div class="viirl-gr-logo">' . viirl_rr_gr_google_g_svg() . '</div>';
+        $html .= '<div class="viirl-gr-stack">';
+        $html .= '<div class="viirl-gr-label">Google rating</div>';
+        $html .= '<div class="viirl-gr-rating">'.esc_html(number_format($rating,1)).'</div>';
+        $html .= '<div class="viirl-gr-stars">'.$stars.'</div>';
         $html .= '</div>';
         $html .= '</a>';
+        $html .= '</div>';
     } else {
-        $html  = '<a class="viirl-gr-card" href="'.esc_url($url).'" target="_blank" rel="noopener" style="'.$wrapStyle.'" aria-label="View '.esc_attr($name).' reviews on Google">';
-        $html .= '<div style="'.$stack.';align-items:flex-start;">';
-        $html .= '<div style="display:flex;align-items:center;gap:8px;">'.$logo.'<span style="font-weight:700">Google</span></div>';
-        $html .= '<div class="viirl-gr-stars" style="display:flex;gap:2px;margin-top:4px;margin-bottom:4px">'.$stars.'</div>';
-        $html .= '<div style="'.$countStyle.'">'.esc_html(number_format($rating,1)).' | '.esc_html(number_format_i18n($count)).' reviews</div>';
+        $html  = '<div class="viirl-gr-wrap">';
+        $html .= '<a class="viirl-gr-card viirl-gr-style-top" href="'.esc_url($url).'" target="_blank" rel="noopener" style="'.$wrap_style.'" aria-label="View '.esc_attr($name).' reviews on Google">';
+        $html .= '<div class="viirl-gr-logo">' . viirl_rr_gr_google_g_svg() . '</div>';
+        $html .= '<div class="viirl-gr-stack">';
+        $html .= '<div class="viirl-gr-label">Google rating</div>';
+        $html .= '<div class="viirl-gr-rating">'.esc_html(number_format($rating,1)).'</div>';
+        $html .= '<div class="viirl-gr-stars">'.$stars.'</div>';
+        $html .= '<div class="viirl-gr-count">'.esc_html(number_format_i18n($count)).' reviews</div>';
         $html .= '</div>';
         $html .= '</a>';
+        $html .= '</div>';
     }
 
     return $html;
 }
 
+/* ------------------------------------------------------------
+ * Frontend renderer + shortcode
+ * ------------------------------------------------------------ */
+function viirl_rr_gr_render() {
+    return viirl_rr_gr_render_with_style();
+}
+
 add_shortcode('viirl_google_rating', function(){
     return viirl_rr_gr_render();
 });
+
+/* ------------------------------------------------------------
+ * AJAX preview on style dropdown change
+ * ------------------------------------------------------------ */
+add_action( 'wp_ajax_viirl_rr_gr_preview_style', function() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( array( 'message' => 'Insufficient permissions.' ), 403 );
+    }
+
+    check_ajax_referer( 'viirl_rr_gr_preview_style', 'nonce' );
+
+    $style = isset($_POST['style']) ? sanitize_text_field( wp_unslash($_POST['style']) ) : 'top';
+    $style = viirl_rr_gr_sanitize_style( $style );
+
+    wp_send_json_success( array(
+        'html' => viirl_rr_gr_render_with_style( $style ),
+    ) );
+} );
 
 /* ------------------------------------------------------------
  * Admin settings page (submenu)
@@ -478,11 +695,12 @@ function viirl_rr_gr_settings_page(){ ?>
         <tr>
           <th scope="row"><label for="viirl_rr_gr_style">Style</label></th>
           <td>
-            <?php $cur = get_option('viirl_rr_gr_style','left'); ?>
+            <?php $cur = get_option('viirl_rr_gr_style','top'); ?>
             <select name="viirl_rr_gr_style" id="viirl_rr_gr_style">
-              <option value="left"  <?php selected($cur,'left'); ?>>Left card (logo above stars)</option>
-              <option value="right" <?php selected($cur,'right'); ?>>Right card (logo left, text right)</option>
+                <option value="top"  <?php selected($cur,'top'); ?>>Logo top (stacked)</option>
+                <option value="left" <?php selected($cur,'left'); ?>>Logo left (inline)</option>
             </select>
+            <p class="description">Preview updates automatically when you change this dropdown.</p>
           </td>
         </tr>
 
@@ -498,7 +716,7 @@ function viirl_rr_gr_settings_page(){ ?>
         echo '<h2 style="margin-top:24px;">Preview &amp; status</h2>';
 
         if (is_array($preview) && empty($preview['_error'])) {
-            echo '<div style="margin:10px 0;">' . viirl_rr_gr_render() . '</div>';
+            echo '<div id="viirl-rr-gr-preview-wrap" style="margin:10px 0;max-width:260px;min-width:0;overflow:hidden;">' . viirl_rr_gr_render() . '</div>';
 
             if (!empty($preview['fetched_at'])) {
                 $t    = (int)$preview['fetched_at'];
@@ -517,4 +735,35 @@ function viirl_rr_gr_settings_page(){ ?>
     <h2>Shortcode</h2>
     <p>Use <code>[viirl_google_rating]</code> anywhere.</p>
   </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const styleField = document.getElementById('viirl_rr_gr_style');
+      const previewWrap = document.getElementById('viirl-rr-gr-preview-wrap');
+
+      if (!styleField || !previewWrap) return;
+
+      styleField.addEventListener('change', function () {
+          const formData = new FormData();
+          formData.append('action', 'viirl_rr_gr_preview_style');
+          formData.append('style', styleField.value);
+          formData.append('nonce', '<?php echo esc_js( wp_create_nonce('viirl_rr_gr_preview_style') ); ?>');
+
+          fetch(ajaxurl, {
+              method: 'POST',
+              credentials: 'same-origin',
+              body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data && data.success && data.data && data.data.html) {
+                  previewWrap.innerHTML = data.data.html;
+              }
+          })
+          .catch(error => {
+              console.error('Preview failed:', error);
+          });
+      });
+  });
+  </script>
 <?php }

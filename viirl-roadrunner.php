@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VIIRL Roadrunner
  * Description: VIIRL Utilities: Global Phone Number + Phone Number Link Cleaner + Global Content Variables (reusable site info shortcodes) + Google Ratings Badge + Link Scanner + Footer Copyright + Page/Post Duplicator.
- * Version: 2.2.5
+ * Version: 2.2.6
  * Author: Shelby Gonzales
  */
 
